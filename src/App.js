@@ -9,11 +9,15 @@ function App() {
 		title: "",
 		description: "",
 		location: "",
-		start: "",
+		startDate: "",
+		startTime: "",
 		durationHours: 1,
 		durationMinutes: 0,
-		recurrence: "FREQ=WEEKLY;BYDAY=MO",
+		recurrence: "",
 		count: 10,
+		isRecurring: false,
+		frequency: "",
+		daysOfWeek: [],
 	});
 
 	//actualizar el state del form
@@ -31,21 +35,56 @@ function App() {
 	 * @param {*} date fecha de inicio
 	 * @returns array de fecha
 	 */
-	const transformStartDate = (date) => {
-		const startArray = date
-			.split("-")
-			.map((item, index) =>
-				index === 1 ? parseInt(item, 10) - 1 : parseInt(item, 10)
-			);
-		startArray.push(12, 0); // Añadir hora y minutos
-		return startArray;
+	const transformStartDate = (date, time) => {
+		const [year, month, day] = date.split("-").map(Number);
+		const [hours, minutes] = time.split(":").map(Number);
+		return [year, month, day, hours, minutes];
+	};
+
+	const transformRule = (isRecurring, frequency, daysOfWeek, count) => {
+		let recurrenceRule = "";
+		if (isRecurring) {
+			if (frequency === "partOfWeek") {
+				recurrenceRule = `FREQ=WEEKLY;BYDAY=${daysOfWeek
+					.join(",")
+					.toUpperCase()}`;
+			} else {
+				recurrenceRule = `FREQ=${frequency.toUpperCase()}`;
+			}
+			recurrenceRule += `;COUNT=${count}`;
+		}
+		return recurrenceRule;
+	};
+
+	const handleCheckboxChange = (event) => {
+		const { name, checked } = event.target;
+		setFormData((prevData) => {
+			const newDaysOfWeek = checked
+				? [...prevData.daysOfWeek, name]
+				: prevData.daysOfWeek.filter((day) => day !== name);
+
+			return {
+				...prevData,
+				daysOfWeek: newDaysOfWeek,
+			};
+		});
+	};
+
+	const handleRecurrenceToggle = () => {
+		setFormData((prevData) => ({
+			...prevData,
+			isRecurring: !prevData.isRecurring,
+			recurrence: "", // Reset recurrence when toggling
+			frequency: "",
+			daysOfWeek: [],
+		}));
 	};
 
 	const handleSubmit = (event) => {
 		event.preventDefault();
 
 		const eventDetails = {
-			start: transformStartDate(formData.start),
+			start: transformStartDate(formData.startDate, formData.startTime),
 			duration: {
 				hours: parseInt(formData.durationHours),
 				minutes: parseInt(formData.durationMinutes),
@@ -53,8 +92,26 @@ function App() {
 			title: formData.title,
 			description: formData.description,
 			location: formData.location,
-			recurrenceRule: `${formData.recurrence};COUNT=${formData.count}`,
+			recurrenceRule: transformRule(
+				formData.isRecurring,
+				formData.frequency,
+				formData.daysOfWeek,
+				formData.count
+			),
 		};
+
+		console.log(eventDetails);
+
+		createEvent(eventDetails, (error, value) => {
+			if (error) {
+				console.error("error en lib ->", error);
+				return;
+			}
+			console.table(value);
+			const data = new Blob([value], { type: "text/calendar" });
+			console.info("blob", data);
+			saveAs(data, "event.ics");
+		});
 	};
 
 	return (
@@ -93,12 +150,23 @@ function App() {
 					/>
 				</div>
 				<div className="form-group">
-					<label htmlFor="start">Fecha de inicio (YYYY-MM-DD):</label>
+					<label htmlFor="startDate">Fecha de inicio (YYYY-MM-DD):</label>
 					<input
 						type="date"
-						id="start"
-						name="start"
-						value={formData.start}
+						id="startDate"
+						name="startDate"
+						value={formData.startDate}
+						onChange={handleChange}
+						required
+					/>
+				</div>
+				<div className="form-group">
+					<label htmlFor="startTime">Hora de inicio (HH:MM):</label>
+					<input
+						type="time"
+						id="startTime"
+						name="startTime"
+						value={formData.startTime}
 						onChange={handleChange}
 						required
 					/>
@@ -126,29 +194,74 @@ function App() {
 					/>
 				</div>
 				<div className="form-group">
-					<label htmlFor="recurrence">
-						Recurrencia (e.g., FREQ=WEEKLY;BYDAY=MO):
+					<label>
+						<input
+							type="checkbox"
+							checked={formData.isRecurring}
+							onChange={handleRecurrenceToggle}
+						/>
+						Evento recurrente
 					</label>
-					<input
-						type="text"
-						id="recurrence"
-						name="recurrence"
-						value={formData.recurrence}
-						onChange={handleChange}
-						required
-					/>
 				</div>
-				<div className="form-group">
-					<label htmlFor="count">Número de repeticiones:</label>
-					<input
-						type="number"
-						id="count"
-						name="count"
-						value={formData.count}
-						onChange={handleChange}
-						required
-					/>
-				</div>
+				{/*<-- Recurrencia --> */}
+				{formData.isRecurring && (
+					<>
+						<div className="form-group">
+							<label htmlFor="frequency">Frecuencia:</label>
+							<select
+								id="frequency"
+								name="frequency"
+								value={formData.frequency}
+								onChange={handleChange}
+							>
+								<option value="">Seleccionar frecuencia</option>
+								<option value="daily">Diario</option>
+								<option value="weekly">Semanal</option>
+								<option value="partOfWeek">Parte de la semana</option>
+								<option value="monthly">Mensual</option>
+							</select>
+						</div>
+						{formData.frequency === "partOfWeek" && (
+							<div className="form-group">
+								<label>Días de la semana:</label>
+								<div className="checkbox-group">
+									{[
+										{ en: "MO", es: "L" },
+										{ en: "TU", es: "M" },
+										{ en: "WE", es: "X" },
+										{ en: "TH", es: "J" },
+										{ en: "FR", es: "V" },
+										{ en: "SA", es: "S" },
+										{ en: "SU", es: "D" },
+									].map((day) => (
+										<label key={day.en}>
+											<input
+												type="checkbox"
+												name={day.en}
+												checked={formData.daysOfWeek.includes(day.en)}
+												onChange={handleCheckboxChange}
+												value={day.en}
+											/>
+											{day.es}
+										</label>
+									))}
+								</div>
+							</div>
+						)}
+						<div className="form-group">
+							<label htmlFor="count">Número de repeticiones:</label>
+							<input
+								type="number"
+								id="count"
+								name="count"
+								value={formData.count}
+								onChange={handleChange}
+								required
+							/>
+						</div>
+					</>
+				)}
+
 				<button className="submit-button" type="submit">
 					Crear evento
 				</button>
