@@ -3,6 +3,48 @@ import { createEvent } from "ics";
 import { saveAs } from "file-saver";
 import "./App.css";
 
+export const createWeeklyRecurrenceRule = (daysOfWeek) => {
+	return `FREQ=WEEKLY;BYDAY=${daysOfWeek.join(",").toUpperCase()}`;
+};
+
+export const createFrequencyRecurrenceRule = (frequency) => {
+	return `FREQ=${frequency.toUpperCase()}`;
+};
+
+export const transformRule = (isRecurring, frequency, daysOfWeek, count) => {
+	let recurrenceRule = "";
+	if (isRecurring) {
+		recurrenceRule =
+			frequency === "partOfWeek"
+				? createWeeklyRecurrenceRule(daysOfWeek)
+				: createFrequencyRecurrenceRule(frequency);
+		recurrenceRule += `;COUNT=${count}`;
+	}
+	return recurrenceRule;
+};
+/**
+ * @function transformStartDate
+ * @description transforma una fecha de inicio para que pueda ser interpretada por Calendar
+ * @param {*} date fecha de inicio
+ * @returns array de fecha
+ */
+export const transformStartDate = (date, time) => {
+	const [year, month, day] = date.split("-").map(Number);
+	const [hours, minutes] = time.split(":").map(Number);
+	return [year, month, day, hours, minutes];
+};
+
+export const createMyEvent = (error, value) => {
+	if (error) {
+		console.error("error en lib ->", error);
+		return;
+	}
+	console.table(value);
+	const data = new Blob([value], { type: "text/calendar" });
+	console.info("blob", data);
+	saveAs(data, "event.ics");
+};
+
 function App() {
 	//datos iniciales
 	const [formData, setFormData] = useState({
@@ -30,32 +72,10 @@ function App() {
 	};
 
 	/**
-	 * @function transformStartDate
-	 * @description transforma una fecha de inicio para que pueda ser interpretada por Calendar
-	 * @param {*} date fecha de inicio
-	 * @returns array de fecha
+	 * @function handleCheckboxChange
+	 * @description maneja el cambio de estado de los checkbox
+	 * @param {*} event
 	 */
-	const transformStartDate = (date, time) => {
-		const [year, month, day] = date.split("-").map(Number);
-		const [hours, minutes] = time.split(":").map(Number);
-		return [year, month, day, hours, minutes];
-	};
-
-	const transformRule = (isRecurring, frequency, daysOfWeek, count) => {
-		let recurrenceRule = "";
-		if (isRecurring) {
-			if (frequency === "partOfWeek") {
-				recurrenceRule = `FREQ=WEEKLY;BYDAY=${daysOfWeek
-					.join(",")
-					.toUpperCase()}`;
-			} else {
-				recurrenceRule = `FREQ=${frequency.toUpperCase()}`;
-			}
-			recurrenceRule += `;COUNT=${count}`;
-		}
-		return recurrenceRule;
-	};
-
 	const handleCheckboxChange = (event) => {
 		const { name, checked } = event.target;
 		setFormData((prevData) => {
@@ -102,16 +122,7 @@ function App() {
 
 		console.log(eventDetails);
 
-		createEvent(eventDetails, (error, value) => {
-			if (error) {
-				console.error("error en lib ->", error);
-				return;
-			}
-			console.table(value);
-			const data = new Blob([value], { type: "text/calendar" });
-			console.info("blob", data);
-			saveAs(data, "event.ics");
-		});
+		createEvent(eventDetails, createMyEvent);
 	};
 
 	return (
