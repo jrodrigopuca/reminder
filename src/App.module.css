@@ -31,7 +31,7 @@
   display: block;
 }
 
-.formGroup input,
+.formGroup input:not([type="checkbox"]),
 .formGroup select {
   width: 100%;
   padding: 10px;
@@ -41,15 +41,33 @@
   box-sizing: border-box;
 }
 
+.formGroup input[type="checkbox"] {
+  width: auto;
+  margin-right: 6px;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  color: #555;
+}
+
 .checkboxGroup {
   display: flex;
   flex-wrap: wrap;
+  gap: 12px;
 }
 
 .checkboxGroup label {
-  margin-right: 10px;
+  display: flex;
+  align-items: center;
   font-size: 14px;
   color: #555;
+  cursor: pointer;
 }
 
 .submitButton {

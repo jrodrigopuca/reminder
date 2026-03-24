@@ -130,7 +130,7 @@ function App() {
 			<h1 className={styles.title}>Crear un evento recurrente</h1>
 			<form className={styles.form} onSubmit={handleSubmit}>
 				<div className={styles.formGroup}>
-					<label htmlFor="title">Titulo:</label>
+					<label htmlFor="title">Título:</label>
 					<input
 						type="text"
 						id="title"
@@ -141,7 +141,7 @@ function App() {
 					/>
 				</div>
 				<div className={styles.formGroup}>
-					<label htmlFor="description">Descripcion:</label>
+					<label htmlFor="description">Descripción:</label>
 					<input
 						type="text"
 						id="description"
@@ -151,7 +151,7 @@ function App() {
 					/>
 				</div>
 				<div className={styles.formGroup}>
-					<label htmlFor="location">Ubicacion:</label>
+					<label htmlFor="location">Ubicación:</label>
 					<input
 						type="text"
 						id="location"
@@ -183,7 +183,7 @@ function App() {
 					/>
 				</div>
 				<div className={styles.formGroup}>
-					<label htmlFor="durationHours">Duracion (horas):</label>
+					<label htmlFor="durationHours">Duración (horas):</label>
 					<input
 						type="number"
 						id="durationHours"
@@ -194,7 +194,7 @@ function App() {
 					/>
 				</div>
 				<div className={styles.formGroup}>
-					<label htmlFor="durationMinutes">Duracion (minutos):</label>
+					<label htmlFor="durationMinutes">Duración (minutos):</label>
 					<input
 						type="number"
 						id="durationMinutes"
@@ -205,7 +205,7 @@ function App() {
 					/>
 				</div>
 				<div className={styles.formGroup}>
-					<label>
+					<label className={styles.checkboxLabel}>
 						<input
 							type="checkbox"
 							checked={formData.isRecurring}
@@ -233,7 +233,7 @@ function App() {
 						</div>
 						{formData.frequency === "partOfWeek" && (
 							<div className={styles.formGroup}>
-								<label>Dias de la semana:</label>
+								<label>Días de la semana:</label>
 								<div className={styles.checkboxGroup}>
 									{[
 										{ en: "MO", es: "L" },
@@ -259,7 +259,7 @@ function App() {
 							</div>
 						)}
 						<div className={styles.formGroup}>
-							<label htmlFor="count">Numero de repeticiones:</label>
+							<label htmlFor="count">Número de repeticiones:</label>
 							<input
 								type="number"
 								id="count"
