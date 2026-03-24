@@ -342,4 +342,104 @@ describe("validateEventForm", () => {
 			expect(errors.batchTotalDays).toBeDefined();
 		});
 	});
+
+	describe("capabilities-aware validation", () => {
+		const allCaps = { recurrence: true, alarms: true, attendees: true, organizer: true, batch: true };
+
+		it("should skip recurrence validation when recurrence capability is false", () => {
+			const caps = { ...allCaps, recurrence: false };
+			const errors = validateEventForm(
+				{
+					...validFormData,
+					isRecurring: true,
+					frequency: "",
+					daysOfWeek: [],
+					count: 0,
+				},
+				caps,
+			);
+			expect(errors.frequency).toBeUndefined();
+			expect(errors.daysOfWeek).toBeUndefined();
+			expect(errors.count).toBeUndefined();
+		});
+
+		it("should skip alarm validation when alarms capability is false", () => {
+			const caps = { ...allCaps, alarms: false };
+			const errors = validateEventForm(
+				{
+					...validFormData,
+					alarm: { enabled: true, preset: "custom", customHours: 0, customMinutes: 0 },
+				},
+				caps,
+			);
+			expect(errors.alarmCustom).toBeUndefined();
+		});
+
+		it("should skip attendees validation when attendees capability is false", () => {
+			const caps = { ...allCaps, attendees: false };
+			const errors = validateEventForm(
+				{
+					...validFormData,
+					attendees: [{ name: "Ana", email: "not-valid", rsvp: false }],
+				},
+				caps,
+			);
+			expect(errors.attendees).toBeUndefined();
+		});
+
+		it("should skip organizer validation when organizer capability is false", () => {
+			const caps = { ...allCaps, organizer: false };
+			const errors = validateEventForm(
+				{
+					...validFormData,
+					organizer: { name: "Boss", email: "not-valid" },
+				},
+				caps,
+			);
+			expect(errors.organizerEmail).toBeUndefined();
+		});
+
+		it("should skip batch validation when batch capability is false", () => {
+			const caps = { ...allCaps, batch: false };
+			const errors = validateEventForm(
+				{
+					...validFormData,
+					batch: { enabled: true, intervalHours: 0, intervalMinutes: 0, totalDays: 0 },
+				},
+				caps,
+			);
+			expect(errors.batchInterval).toBeUndefined();
+			expect(errors.batchTotalDays).toBeUndefined();
+		});
+
+		it("should validate everything when all capabilities are true", () => {
+			const errors = validateEventForm(
+				{
+					...validFormData,
+					isRecurring: true,
+					frequency: "",
+					alarm: { enabled: true, preset: "custom", customHours: 0, customMinutes: 0 },
+					attendees: [{ name: "Ana", email: "bad", rsvp: false }],
+					organizer: { name: "Boss", email: "bad" },
+					batch: { enabled: true, intervalHours: 0, intervalMinutes: 0, totalDays: 0 },
+				},
+				allCaps,
+			);
+			expect(errors.frequency).toBeDefined();
+			expect(errors.alarmCustom).toBeDefined();
+			expect(errors.attendees).toBeDefined();
+			expect(errors.organizerEmail).toBeDefined();
+			expect(errors.batchInterval).toBeDefined();
+			expect(errors.batchTotalDays).toBeDefined();
+		});
+
+		it("should always validate core fields regardless of capabilities", () => {
+			const noCaps = { recurrence: false, alarms: false, attendees: false, organizer: false, batch: false };
+			const errors = validateEventForm(
+				{ ...validFormData, title: "" },
+				noCaps,
+			);
+			expect(errors.title).toBeDefined();
+		});
+	});
 });

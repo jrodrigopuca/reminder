@@ -4,9 +4,18 @@
  * Si el objeto esta vacio, no hay errores.
  *
  * @param {object} formData
+ * @param {object} [capabilities] - Provider capabilities. When omitted, all validations run.
  * @returns {object} Mapa de errores { campo: mensaje }
  */
-export const validateEventForm = (formData) => {
+export const validateEventForm = (formData, capabilities) => {
+	const caps = capabilities ?? {
+		recurrence: true,
+		alarms: true,
+		attendees: true,
+		organizer: true,
+		batch: true,
+	};
+
 	const errors = {};
 
 	if (!formData.title.trim()) {
@@ -36,7 +45,7 @@ export const validateEventForm = (formData) => {
 		errors.durationHours = "La duracion debe ser mayor a 0";
 	}
 
-	if (formData.isRecurring) {
+	if (caps.recurrence && formData.isRecurring) {
 		if (!formData.frequency) {
 			errors.frequency = "Selecciona una frecuencia";
 		}
@@ -66,7 +75,7 @@ export const validateEventForm = (formData) => {
 		}
 	}
 
-	if (formData.attendees?.length > 0) {
+	if (caps.attendees && formData.attendees?.length > 0) {
 		const invalidEmails = formData.attendees.some(
 			(a) => !a.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email)
 		);
@@ -75,13 +84,13 @@ export const validateEventForm = (formData) => {
 		}
 	}
 
-	if (formData.organizer?.email) {
+	if (caps.organizer && formData.organizer?.email) {
 		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.organizer.email)) {
 			errors.organizerEmail = "El email del organizador no es valido";
 		}
 	}
 
-	if (formData.batch?.enabled) {
+	if (caps.batch && formData.batch?.enabled) {
 		const batchHours = parseInt(formData.batch.intervalHours) || 0;
 		const batchMinutes = parseInt(formData.batch.intervalMinutes) || 0;
 		if (batchHours === 0 && batchMinutes === 0) {
@@ -94,7 +103,7 @@ export const validateEventForm = (formData) => {
 		}
 	}
 
-	if (formData.alarm?.enabled && formData.alarm.preset === "custom") {
+	if (caps.alarms && formData.alarm?.enabled && formData.alarm.preset === "custom") {
 		const alarmHours = parseInt(formData.alarm.customHours);
 		const alarmMinutes = parseInt(formData.alarm.customMinutes);
 		const validHours = !isNaN(alarmHours) && alarmHours >= 0;

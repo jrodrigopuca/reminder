@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { downloadIcsFile, downloadBatchIcsFile } from "./services/ics";
+import { PROVIDERS, DEFAULT_PROVIDER, getCapabilities } from "./services/providers";
+import { buildGoogleCalendarUrl, buildOutlookCalendarUrl } from "./services/calendarLinks";
 import { validateEventForm, isFormValid } from "./utils/validation";
 import RecurrenceOptions from "./components/RecurrenceOptions";
 import AlarmOptions from "./components/AlarmOptions";
@@ -43,9 +45,13 @@ function App() {
 	const [formData, setFormData] = useState(INITIAL_FORM_DATA);
 	const [errors, setErrors] = useState({});
 	const [submitted, setSubmitted] = useState(false);
+	const [selectedProvider, setSelectedProvider] = useState(DEFAULT_PROVIDER);
 
-	const currentErrors = submitted ? validateEventForm(formData) : errors;
-	const canSubmit = isFormValid(validateEventForm(formData));
+	const capabilities = getCapabilities(selectedProvider);
+	const providerConfig = PROVIDERS[selectedProvider];
+
+	const currentErrors = submitted ? validateEventForm(formData, capabilities) : errors;
+	const canSubmit = isFormValid(validateEventForm(formData, capabilities));
 
 	const handleChange = (event) => {
 		const { name, value } = event.target;
@@ -139,17 +145,31 @@ function App() {
 		event.preventDefault();
 		setSubmitted(true);
 
-		const validationErrors = validateEventForm(formData);
+		const validationErrors = validateEventForm(formData, capabilities);
 		setErrors(validationErrors);
 
 		if (!isFormValid(validationErrors)) {
 			return;
 		}
 
-		if (formData.batch?.enabled) {
-			downloadBatchIcsFile(formData);
+		if (providerConfig.action === "download") {
+			if (formData.batch?.enabled) {
+				downloadBatchIcsFile(formData);
+			} else {
+				downloadIcsFile(formData);
+			}
 		} else {
-			downloadIcsFile(formData);
+			let url;
+			if (selectedProvider === "google") {
+				url = buildGoogleCalendarUrl(formData);
+			} else if (selectedProvider === "outlook-personal") {
+				url = buildOutlookCalendarUrl(formData, "outlook.live.com");
+			} else if (selectedProvider === "outlook-work") {
+				url = buildOutlookCalendarUrl(formData, "outlook.office.com");
+			}
+			if (url) {
+				window.open(url, "_blank", "noopener,noreferrer");
+			}
 		}
 	};
 
@@ -161,6 +181,19 @@ function App() {
 			<div className={styles.container}>
 				<h1 className={styles.title}>Crear un evento recurrente</h1>
 				<form className={styles.form} onSubmit={handleSubmit} noValidate>
+					<div className={`${styles.formGroup} ${styles.providerGroup}`}>
+						<label htmlFor="provider">Calendario destino:</label>
+						<select
+							id="provider"
+							name="provider"
+							value={selectedProvider}
+							onChange={(e) => setSelectedProvider(e.target.value)}
+						>
+							{Object.entries(PROVIDERS).map(([id, { label }]) => (
+								<option key={id} value={id}>{label}</option>
+							))}
+						</select>
+					</div>
 					<div className={styles.formGroup}>
 						<label htmlFor="title">Título:</label>
 						<input
@@ -262,18 +295,20 @@ function App() {
 							</span>
 						)}
 					</div>
-					<div className={styles.formGroup}>
-						<label className={styles.checkboxLabel}>
-							<input
-								type="checkbox"
-								checked={formData.isRecurring}
-								onChange={handleRecurrenceToggle}
-							/>
-							Evento recurrente
-						</label>
-					</div>
+					{capabilities.recurrence && (
+						<div className={styles.formGroup}>
+							<label className={styles.checkboxLabel}>
+								<input
+									type="checkbox"
+									checked={formData.isRecurring}
+									onChange={handleRecurrenceToggle}
+								/>
+								Evento recurrente
+							</label>
+						</div>
+					)}
 
-					{formData.isRecurring && (
+					{capabilities.recurrence && formData.isRecurring && (
 						<RecurrenceOptions
 							frequency={formData.frequency}
 							daysOfWeek={formData.daysOfWeek}
@@ -288,12 +323,14 @@ function App() {
 						/>
 					)}
 
-					<AlarmOptions
-						alarm={formData.alarm}
-						onAlarmChange={handleAlarmChange}
-						errors={currentErrors}
-						styles={styles}
-					/>
+					{capabilities.alarms && (
+						<AlarmOptions
+							alarm={formData.alarm}
+							onAlarmChange={handleAlarmChange}
+							errors={currentErrors}
+							styles={styles}
+						/>
+					)}
 
 					<AttendeeList
 						attendees={formData.attendees}
@@ -302,28 +339,35 @@ function App() {
 						onAttendeeRemove={handleAttendeeRemove}
 						onAttendeeChange={handleAttendeeChange}
 						onOrganizerChange={handleOrganizerChange}
+						showOrganizer={capabilities.organizer}
 						errors={currentErrors}
 						styles={styles}
 					/>
 
-					<BatchOptions
-						batch={formData.batch}
-						onBatchChange={handleBatchChange}
-						errors={currentErrors}
-						styles={styles}
-					/>
+					{capabilities.batch && (
+						<BatchOptions
+							batch={formData.batch}
+							onBatchChange={handleBatchChange}
+							errors={currentErrors}
+							styles={styles}
+						/>
+					)}
 
 					<button
 						className={styles.submitButton}
 						type="submit"
 						disabled={submitted && !canSubmit}
 					>
-						{formData.batch?.enabled ? "Descargar .ics (batch)" : "Descargar .ics"}
+						{providerConfig.action === "download"
+							? formData.batch?.enabled
+								? "Descargar .ics (batch)"
+								: "Descargar .ics"
+							: `Abrir en ${providerConfig.label}`}
 					</button>
 				</form>
 			</div>
 
-			<LivePreview formData={formData} styles={styles} />
+			<LivePreview formData={formData} capabilities={capabilities} styles={styles} />
 		</div>
 	);
 }

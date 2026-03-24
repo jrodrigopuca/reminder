@@ -4,20 +4,31 @@ import { generateBatchDates, formatBatchDate } from "../../utils/batch";
 
 const MAX_VISIBLE = 10;
 
-function LivePreview({ formData, styles }) {
-	const isBatch = formData.batch?.enabled;
+function LivePreview({ formData, styles, capabilities }) {
+	const caps = capabilities ?? {
+		recurrence: true,
+		alarms: true,
+		attendees: true,
+		batch: true,
+	};
 
-	const recurrenceText = !isBatch && formData.isRecurring
+	const isBatch = caps.batch !== false && formData.batch?.enabled;
+
+	const recurrenceText = caps.recurrence !== false && !isBatch && formData.isRecurring
 		? formatRecurrence(formData)
 		: null;
 
-	const alarmText = formatAlarm(formData.alarm);
-	const hasAlarm = alarmText !== "Sin recordatorio";
+	const alarmText = caps.alarms !== false ? formatAlarm(formData.alarm) : null;
+	const hasAlarm = alarmText !== null && alarmText !== "Sin recordatorio";
 
-	const attendeesText = formatAttendees(formData.attendees, formData.organizer);
-	const hasAttendees = attendeesText !== "Sin invitados";
+	const attendeesText = caps.attendees !== false
+		? formatAttendees(formData.attendees, formData.organizer)
+		: null;
+	const hasAttendees = attendeesText !== null && attendeesText !== "Sin invitados";
 
-	const occurrences = !isBatch ? calculateOccurrences(formData, MAX_VISIBLE) : [];
+	const occurrences = caps.recurrence !== false && !isBatch
+		? calculateOccurrences(formData, MAX_VISIBLE)
+		: [];
 
 	const totalCount =
 		!isBatch && formData.endType === "count" ? parseInt(formData.count) || 0 : null;

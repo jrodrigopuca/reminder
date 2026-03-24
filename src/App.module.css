@@ -32,6 +32,12 @@
   margin-bottom: 15px;
 }
 
+.providerGroup {
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 18px;
+}
+
 .formGroup label {
   font-size: 14px;
   color: #555;
