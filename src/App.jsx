@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { createEvent } from "ics";
 import { saveAs } from "file-saver";
-import "./App.css";
+import styles from "./App.module.css";
 
 export const createWeeklyRecurrenceRule = (daysOfWeek) => {
 	return `FREQ=WEEKLY;BYDAY=${daysOfWeek.join(",").toUpperCase()}`;
@@ -126,11 +126,11 @@ function App() {
 	};
 
 	return (
-		<div className="container">
-			<h1 className="title">Crear un evento recurrente</h1>
-			<form className="form" onSubmit={handleSubmit}>
-				<div className="form-group">
-					<label htmlFor="title">Título:</label>
+		<div className={styles.container}>
+			<h1 className={styles.title}>Crear un evento recurrente</h1>
+			<form className={styles.form} onSubmit={handleSubmit}>
+				<div className={styles.formGroup}>
+					<label htmlFor="title">Titulo:</label>
 					<input
 						type="text"
 						id="title"
@@ -140,8 +140,8 @@ function App() {
 						required
 					/>
 				</div>
-				<div className="form-group">
-					<label htmlFor="description">Descripción:</label>
+				<div className={styles.formGroup}>
+					<label htmlFor="description">Descripcion:</label>
 					<input
 						type="text"
 						id="description"
@@ -150,8 +150,8 @@ function App() {
 						onChange={handleChange}
 					/>
 				</div>
-				<div className="form-group">
-					<label htmlFor="location">Ubicación:</label>
+				<div className={styles.formGroup}>
+					<label htmlFor="location">Ubicacion:</label>
 					<input
 						type="text"
 						id="location"
@@ -160,7 +160,7 @@ function App() {
 						onChange={handleChange}
 					/>
 				</div>
-				<div className="form-group">
+				<div className={styles.formGroup}>
 					<label htmlFor="startDate">Fecha de inicio (YYYY-MM-DD):</label>
 					<input
 						type="date"
@@ -171,7 +171,7 @@ function App() {
 						required
 					/>
 				</div>
-				<div className="form-group">
+				<div className={styles.formGroup}>
 					<label htmlFor="startTime">Hora de inicio (HH:MM):</label>
 					<input
 						type="time"
@@ -182,8 +182,8 @@ function App() {
 						required
 					/>
 				</div>
-				<div className="form-group">
-					<label htmlFor="durationHours">Duración (horas):</label>
+				<div className={styles.formGroup}>
+					<label htmlFor="durationHours">Duracion (horas):</label>
 					<input
 						type="number"
 						id="durationHours"
@@ -193,8 +193,8 @@ function App() {
 						required
 					/>
 				</div>
-				<div className="form-group">
-					<label htmlFor="durationMinutes">Duración (minutos):</label>
+				<div className={styles.formGroup}>
+					<label htmlFor="durationMinutes">Duracion (minutos):</label>
 					<input
 						type="number"
 						id="durationMinutes"
@@ -204,7 +204,7 @@ function App() {
 						required
 					/>
 				</div>
-				<div className="form-group">
+				<div className={styles.formGroup}>
 					<label>
 						<input
 							type="checkbox"
@@ -214,10 +214,9 @@ function App() {
 						Evento recurrente
 					</label>
 				</div>
-				{/*<-- Recurrencia --> */}
 				{formData.isRecurring && (
 					<>
-						<div className="form-group">
+						<div className={styles.formGroup}>
 							<label htmlFor="frequency">Frecuencia:</label>
 							<select
 								id="frequency"
@@ -233,9 +232,9 @@ function App() {
 							</select>
 						</div>
 						{formData.frequency === "partOfWeek" && (
-							<div className="form-group">
-								<label>Días de la semana:</label>
-								<div className="checkbox-group">
+							<div className={styles.formGroup}>
+								<label>Dias de la semana:</label>
+								<div className={styles.checkboxGroup}>
 									{[
 										{ en: "MO", es: "L" },
 										{ en: "TU", es: "M" },
@@ -259,8 +258,8 @@ function App() {
 								</div>
 							</div>
 						)}
-						<div className="form-group">
-							<label htmlFor="count">Número de repeticiones:</label>
+						<div className={styles.formGroup}>
+							<label htmlFor="count">Numero de repeticiones:</label>
 							<input
 								type="number"
 								id="count"
@@ -273,7 +272,7 @@ function App() {
 					</>
 				)}
 
-				<button className="submit-button" type="submit">
+				<button className={styles.submitButton} type="submit">
 					Crear evento
 				</button>
 			</form>
