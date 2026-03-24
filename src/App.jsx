@@ -1,7 +1,11 @@
 import { useState } from "react";
-import { downloadIcsFile } from "./services/ics";
+import { downloadIcsFile, downloadBatchIcsFile } from "./services/ics";
 import { validateEventForm, isFormValid } from "./utils/validation";
 import RecurrenceOptions from "./components/RecurrenceOptions";
+import AlarmOptions from "./components/AlarmOptions";
+import AttendeeList from "./components/AttendeeList";
+import BatchOptions from "./components/BatchOptions";
+import LivePreview from "./components/LivePreview";
 import styles from "./App.module.css";
 
 const INITIAL_FORM_DATA = {
@@ -12,11 +16,27 @@ const INITIAL_FORM_DATA = {
 	startTime: "",
 	durationHours: 1,
 	durationMinutes: 0,
-	recurrence: "",
-	count: 10,
 	isRecurring: false,
 	frequency: "",
 	daysOfWeek: [],
+	endType: "count",
+	count: 10,
+	untilDate: "",
+	interval: 1,
+	alarm: {
+		enabled: false,
+		preset: "none",
+		customHours: 0,
+		customMinutes: 0,
+	},
+	attendees: [],
+	organizer: { name: "", email: "" },
+	batch: {
+		enabled: false,
+		intervalHours: 8,
+		intervalMinutes: 0,
+		totalDays: 1,
+	},
 };
 
 function App() {
@@ -53,9 +73,65 @@ function App() {
 		setFormData((prevData) => ({
 			...prevData,
 			isRecurring: !prevData.isRecurring,
-			recurrence: "",
 			frequency: "",
 			daysOfWeek: [],
+			endType: "count",
+			count: 10,
+			untilDate: "",
+			interval: 1,
+		}));
+	};
+
+	const handleAlarmChange = (field, value) => {
+		setFormData((prevData) => ({
+			...prevData,
+			alarm: {
+				...prevData.alarm,
+				[field]: value,
+			},
+		}));
+	};
+
+	const handleAttendeeAdd = () => {
+		setFormData((prevData) => ({
+			...prevData,
+			attendees: [...prevData.attendees, { name: "", email: "", rsvp: false }],
+		}));
+	};
+
+	const handleAttendeeRemove = (index) => {
+		setFormData((prevData) => ({
+			...prevData,
+			attendees: prevData.attendees.filter((_, i) => i !== index),
+		}));
+	};
+
+	const handleAttendeeChange = (index, field, value) => {
+		setFormData((prevData) => ({
+			...prevData,
+			attendees: prevData.attendees.map((a, i) =>
+				i === index ? { ...a, [field]: value } : a
+			),
+		}));
+	};
+
+	const handleOrganizerChange = (field, value) => {
+		setFormData((prevData) => ({
+			...prevData,
+			organizer: {
+				...prevData.organizer,
+				[field]: value,
+			},
+		}));
+	};
+
+	const handleBatchChange = (field, value) => {
+		setFormData((prevData) => ({
+			...prevData,
+			batch: {
+				...prevData.batch,
+				[field]: value,
+			},
 		}));
 	};
 
@@ -70,144 +146,184 @@ function App() {
 			return;
 		}
 
-		downloadIcsFile(formData);
+		if (formData.batch?.enabled) {
+			downloadBatchIcsFile(formData);
+		} else {
+			downloadIcsFile(formData);
+		}
 	};
 
 	const fieldClassName = (fieldName) =>
 		currentErrors[fieldName] ? `${styles.inputError}` : "";
 
 	return (
-		<div className={styles.container}>
-			<h1 className={styles.title}>Crear un evento recurrente</h1>
-			<form className={styles.form} onSubmit={handleSubmit} noValidate>
-				<div className={styles.formGroup}>
-					<label htmlFor="title">Título:</label>
-					<input
-						type="text"
-						id="title"
-						name="title"
-						className={fieldClassName("title")}
-						value={formData.title}
-						onChange={handleChange}
-					/>
-					{currentErrors.title && (
-						<span className={styles.fieldError}>{currentErrors.title}</span>
-					)}
-				</div>
-				<div className={styles.formGroup}>
-					<label htmlFor="description">Descripción:</label>
-					<input
-						type="text"
-						id="description"
-						name="description"
-						value={formData.description}
-						onChange={handleChange}
-					/>
-				</div>
-				<div className={styles.formGroup}>
-					<label htmlFor="location">Ubicación:</label>
-					<input
-						type="text"
-						id="location"
-						name="location"
-						value={formData.location}
-						onChange={handleChange}
-					/>
-				</div>
-				<div className={styles.formGroup}>
-					<label htmlFor="startDate">Fecha de inicio:</label>
-					<input
-						type="date"
-						id="startDate"
-						name="startDate"
-						className={fieldClassName("startDate")}
-						value={formData.startDate}
-						onChange={handleChange}
-					/>
-					{currentErrors.startDate && (
-						<span className={styles.fieldError}>{currentErrors.startDate}</span>
-					)}
-				</div>
-				<div className={styles.formGroup}>
-					<label htmlFor="startTime">Hora de inicio:</label>
-					<input
-						type="time"
-						id="startTime"
-						name="startTime"
-						className={fieldClassName("startTime")}
-						value={formData.startTime}
-						onChange={handleChange}
-					/>
-					{currentErrors.startTime && (
-						<span className={styles.fieldError}>{currentErrors.startTime}</span>
-					)}
-				</div>
-				<div className={styles.formGroup}>
-					<label htmlFor="durationHours">Duración (horas):</label>
-					<input
-						type="number"
-						id="durationHours"
-						name="durationHours"
-						className={fieldClassName("durationHours")}
-						value={formData.durationHours}
-						onChange={handleChange}
-						min="0"
-					/>
-					{currentErrors.durationHours && (
-						<span className={styles.fieldError}>
-							{currentErrors.durationHours}
-						</span>
-					)}
-				</div>
-				<div className={styles.formGroup}>
-					<label htmlFor="durationMinutes">Duración (minutos):</label>
-					<input
-						type="number"
-						id="durationMinutes"
-						name="durationMinutes"
-						className={fieldClassName("durationMinutes")}
-						value={formData.durationMinutes}
-						onChange={handleChange}
-						min="0"
-						max="59"
-					/>
-					{currentErrors.durationMinutes && (
-						<span className={styles.fieldError}>
-							{currentErrors.durationMinutes}
-						</span>
-					)}
-				</div>
-				<div className={styles.formGroup}>
-					<label className={styles.checkboxLabel}>
+		<div className={styles.layout}>
+			<div className={styles.container}>
+				<h1 className={styles.title}>Crear un evento recurrente</h1>
+				<form className={styles.form} onSubmit={handleSubmit} noValidate>
+					<div className={styles.formGroup}>
+						<label htmlFor="title">Título:</label>
 						<input
-							type="checkbox"
-							checked={formData.isRecurring}
-							onChange={handleRecurrenceToggle}
+							type="text"
+							id="title"
+							name="title"
+							className={fieldClassName("title")}
+							value={formData.title}
+							onChange={handleChange}
 						/>
-						Evento recurrente
-					</label>
-				</div>
+						{currentErrors.title && (
+							<span className={styles.fieldError}>{currentErrors.title}</span>
+						)}
+					</div>
+					<div className={styles.formGroup}>
+						<label htmlFor="description">Descripción:</label>
+						<input
+							type="text"
+							id="description"
+							name="description"
+							value={formData.description}
+							onChange={handleChange}
+						/>
+					</div>
+					<div className={styles.formGroup}>
+						<label htmlFor="location">Ubicación:</label>
+						<input
+							type="text"
+							id="location"
+							name="location"
+							value={formData.location}
+							onChange={handleChange}
+						/>
+					</div>
+					<div className={styles.formGroup}>
+						<label htmlFor="startDate">Fecha de inicio:</label>
+						<input
+							type="date"
+							id="startDate"
+							name="startDate"
+							className={fieldClassName("startDate")}
+							value={formData.startDate}
+							onChange={handleChange}
+						/>
+						{currentErrors.startDate && (
+							<span className={styles.fieldError}>
+								{currentErrors.startDate}
+							</span>
+						)}
+					</div>
+					<div className={styles.formGroup}>
+						<label htmlFor="startTime">Hora de inicio:</label>
+						<input
+							type="time"
+							id="startTime"
+							name="startTime"
+							className={fieldClassName("startTime")}
+							value={formData.startTime}
+							onChange={handleChange}
+						/>
+						{currentErrors.startTime && (
+							<span className={styles.fieldError}>
+								{currentErrors.startTime}
+							</span>
+						)}
+					</div>
+					<div className={styles.formGroup}>
+						<label htmlFor="durationHours">Duración (horas):</label>
+						<input
+							type="number"
+							id="durationHours"
+							name="durationHours"
+							className={fieldClassName("durationHours")}
+							value={formData.durationHours}
+							onChange={handleChange}
+							min="0"
+						/>
+						{currentErrors.durationHours && (
+							<span className={styles.fieldError}>
+								{currentErrors.durationHours}
+							</span>
+						)}
+					</div>
+					<div className={styles.formGroup}>
+						<label htmlFor="durationMinutes">Duración (minutos):</label>
+						<input
+							type="number"
+							id="durationMinutes"
+							name="durationMinutes"
+							className={fieldClassName("durationMinutes")}
+							value={formData.durationMinutes}
+							onChange={handleChange}
+							min="0"
+							max="59"
+						/>
+						{currentErrors.durationMinutes && (
+							<span className={styles.fieldError}>
+								{currentErrors.durationMinutes}
+							</span>
+						)}
+					</div>
+					<div className={styles.formGroup}>
+						<label className={styles.checkboxLabel}>
+							<input
+								type="checkbox"
+								checked={formData.isRecurring}
+								onChange={handleRecurrenceToggle}
+							/>
+							Evento recurrente
+						</label>
+					</div>
 
-				{formData.isRecurring && (
-					<RecurrenceOptions
-						frequency={formData.frequency}
-						daysOfWeek={formData.daysOfWeek}
-						count={formData.count}
-						onChange={handleChange}
-						onDayChange={handleCheckboxChange}
+					{formData.isRecurring && (
+						<RecurrenceOptions
+							frequency={formData.frequency}
+							daysOfWeek={formData.daysOfWeek}
+							endType={formData.endType}
+							count={formData.count}
+							untilDate={formData.untilDate}
+							interval={formData.interval}
+							onChange={handleChange}
+							onDayChange={handleCheckboxChange}
+							errors={currentErrors}
+							styles={styles}
+						/>
+					)}
+
+					<AlarmOptions
+						alarm={formData.alarm}
+						onAlarmChange={handleAlarmChange}
 						errors={currentErrors}
 						styles={styles}
 					/>
-				)}
 
-				<button
-					className={styles.submitButton}
-					type="submit"
-					disabled={submitted && !canSubmit}
-				>
-					Crear evento
-				</button>
-			</form>
+					<AttendeeList
+						attendees={formData.attendees}
+						organizer={formData.organizer}
+						onAttendeeAdd={handleAttendeeAdd}
+						onAttendeeRemove={handleAttendeeRemove}
+						onAttendeeChange={handleAttendeeChange}
+						onOrganizerChange={handleOrganizerChange}
+						errors={currentErrors}
+						styles={styles}
+					/>
+
+					<BatchOptions
+						batch={formData.batch}
+						onBatchChange={handleBatchChange}
+						errors={currentErrors}
+						styles={styles}
+					/>
+
+					<button
+						className={styles.submitButton}
+						type="submit"
+						disabled={submitted && !canSubmit}
+					>
+						{formData.batch?.enabled ? "Descargar .ics (batch)" : "Descargar .ics"}
+					</button>
+				</form>
+			</div>
+
+			<LivePreview formData={formData} styles={styles} />
 		</div>
 	);
 }

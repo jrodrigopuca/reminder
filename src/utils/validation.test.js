@@ -12,6 +12,13 @@ const validFormData = {
 	frequency: "",
 	daysOfWeek: [],
 	count: 10,
+	endType: "count",
+	untilDate: "",
+	interval: 1,
+	alarm: { enabled: false, preset: "none", customHours: 0, customMinutes: 0 },
+	attendees: [],
+	organizer: { name: "", email: "" },
+	batch: { enabled: false, intervalHours: 8, intervalMinutes: 0, totalDays: 1 },
 };
 
 describe("validateEventForm", () => {
@@ -66,9 +73,12 @@ describe("validateEventForm", () => {
 			isRecurring: true,
 			frequency: "weekly",
 			count: 10,
+			endType: "count",
+			untilDate: "",
+			interval: 1,
 		};
 
-		it("should return no errors for valid recurring event", () => {
+		it("should return no errors for valid recurring event with count", () => {
 			const errors = validateEventForm(recurringBase);
 			expect(isFormValid(errors)).toBe(true);
 		});
@@ -96,9 +106,19 @@ describe("validateEventForm", () => {
 			expect(errors.daysOfWeek).toBeUndefined();
 		});
 
-		it("should require count >= 1", () => {
+		it("should require count >= 1 when endType is count", () => {
 			const errors = validateEventForm({ ...recurringBase, count: 0 });
 			expect(errors.count).toBeDefined();
+		});
+
+		it("should not validate count when endType is until", () => {
+			const errors = validateEventForm({
+				...recurringBase,
+				endType: "until",
+				untilDate: "2025-12-31",
+				count: 0,
+			});
+			expect(errors.count).toBeUndefined();
 		});
 
 		it("should not validate recurrence fields when not recurring", () => {
@@ -112,6 +132,214 @@ describe("validateEventForm", () => {
 			expect(errors.frequency).toBeUndefined();
 			expect(errors.daysOfWeek).toBeUndefined();
 			expect(errors.count).toBeUndefined();
+		});
+
+		describe("endType: until", () => {
+			const untilBase = {
+				...recurringBase,
+				endType: "until",
+				untilDate: "2025-12-31",
+			};
+
+			it("should return no errors for valid until event", () => {
+				const errors = validateEventForm(untilBase);
+				expect(isFormValid(errors)).toBe(true);
+			});
+
+			it("should require untilDate when endType is until", () => {
+				const errors = validateEventForm({ ...untilBase, untilDate: "" });
+				expect(errors.untilDate).toBeDefined();
+			});
+
+			it("should require untilDate to be after startDate", () => {
+				const errors = validateEventForm({
+					...untilBase,
+					startDate: "2025-06-15",
+					untilDate: "2025-06-15",
+				});
+				expect(errors.untilDate).toBeDefined();
+			});
+
+			it("should reject untilDate before startDate", () => {
+				const errors = validateEventForm({
+					...untilBase,
+					startDate: "2025-06-15",
+					untilDate: "2025-06-10",
+				});
+				expect(errors.untilDate).toBeDefined();
+			});
+
+			it("should accept untilDate after startDate", () => {
+				const errors = validateEventForm({
+					...untilBase,
+					startDate: "2025-06-15",
+					untilDate: "2025-06-16",
+				});
+				expect(errors.untilDate).toBeUndefined();
+			});
+		});
+
+		describe("interval", () => {
+			it("should accept interval of 1", () => {
+				const errors = validateEventForm({ ...recurringBase, interval: 1 });
+				expect(errors.interval).toBeUndefined();
+			});
+
+			it("should accept interval greater than 1", () => {
+				const errors = validateEventForm({ ...recurringBase, interval: 3 });
+				expect(errors.interval).toBeUndefined();
+			});
+
+			it("should reject interval less than 1", () => {
+				const errors = validateEventForm({ ...recurringBase, interval: 0 });
+				expect(errors.interval).toBeDefined();
+			});
+		});
+	});
+
+	describe("alarm", () => {
+		it("should not validate alarm when disabled", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				alarm: { enabled: false, preset: "custom", customHours: 0, customMinutes: 0 },
+			});
+			expect(errors.alarmCustom).toBeUndefined();
+		});
+
+		it("should not validate alarm when preset is not custom", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				alarm: { enabled: true, preset: "15", customHours: 0, customMinutes: 0 },
+			});
+			expect(errors.alarmCustom).toBeUndefined();
+		});
+
+		it("should reject custom alarm with zero hours and minutes", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				alarm: { enabled: true, preset: "custom", customHours: 0, customMinutes: 0 },
+			});
+			expect(errors.alarmCustom).toBeDefined();
+		});
+
+		it("should accept custom alarm with valid hours", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				alarm: { enabled: true, preset: "custom", customHours: 1, customMinutes: 0 },
+			});
+			expect(errors.alarmCustom).toBeUndefined();
+		});
+
+		it("should accept custom alarm with valid minutes", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				alarm: { enabled: true, preset: "custom", customHours: 0, customMinutes: 30 },
+			});
+			expect(errors.alarmCustom).toBeUndefined();
+		});
+	});
+
+	describe("attendees", () => {
+		it("should not validate attendees when array is empty", () => {
+			const errors = validateEventForm({ ...validFormData, attendees: [] });
+			expect(errors.attendees).toBeUndefined();
+		});
+
+		it("should accept valid attendee emails", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				attendees: [
+					{ name: "Ana", email: "ana@test.com", rsvp: false },
+					{ name: "Bob", email: "bob@company.org", rsvp: true },
+				],
+			});
+			expect(errors.attendees).toBeUndefined();
+		});
+
+		it("should reject invalid attendee emails", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				attendees: [{ name: "Ana", email: "not-an-email", rsvp: false }],
+			});
+			expect(errors.attendees).toBeDefined();
+		});
+
+		it("should reject attendee with empty email", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				attendees: [{ name: "Ana", email: "", rsvp: false }],
+			});
+			expect(errors.attendees).toBeDefined();
+		});
+	});
+
+	describe("organizer", () => {
+		it("should not validate organizer when email is empty", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				organizer: { name: "Boss", email: "" },
+			});
+			expect(errors.organizerEmail).toBeUndefined();
+		});
+
+		it("should accept valid organizer email", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				organizer: { name: "Boss", email: "boss@test.com" },
+			});
+			expect(errors.organizerEmail).toBeUndefined();
+		});
+
+		it("should reject invalid organizer email", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				organizer: { name: "Boss", email: "not-valid" },
+			});
+			expect(errors.organizerEmail).toBeDefined();
+		});
+	});
+
+	describe("batch", () => {
+		it("should not validate batch when disabled", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				batch: { enabled: false, intervalHours: 0, intervalMinutes: 0, totalDays: 0 },
+			});
+			expect(errors.batchInterval).toBeUndefined();
+			expect(errors.batchTotalDays).toBeUndefined();
+		});
+
+		it("should accept valid batch config", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				batch: { enabled: true, intervalHours: 8, intervalMinutes: 0, totalDays: 3 },
+			});
+			expect(errors.batchInterval).toBeUndefined();
+			expect(errors.batchTotalDays).toBeUndefined();
+		});
+
+		it("should reject zero batch interval", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				batch: { enabled: true, intervalHours: 0, intervalMinutes: 0, totalDays: 1 },
+			});
+			expect(errors.batchInterval).toBeDefined();
+		});
+
+		it("should accept batch interval with minutes only", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				batch: { enabled: true, intervalHours: 0, intervalMinutes: 30, totalDays: 1 },
+			});
+			expect(errors.batchInterval).toBeUndefined();
+		});
+
+		it("should reject totalDays less than 1", () => {
+			const errors = validateEventForm({
+				...validFormData,
+				batch: { enabled: true, intervalHours: 8, intervalMinutes: 0, totalDays: 0 },
+			});
+			expect(errors.batchTotalDays).toBeDefined();
 		});
 	});
 });

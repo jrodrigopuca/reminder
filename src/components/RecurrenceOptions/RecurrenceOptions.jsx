@@ -3,7 +3,10 @@ import DayPicker from "../DayPicker";
 function RecurrenceOptions({
 	frequency,
 	daysOfWeek,
+	endType,
 	count,
+	untilDate,
+	interval,
 	onChange,
 	onDayChange,
 	errors = {},
@@ -44,20 +47,68 @@ function RecurrenceOptions({
 			)}
 
 			<div className={styles.formGroup}>
-				<label htmlFor="count">Numero de repeticiones:</label>
+				<label htmlFor="interval">Cada cuantos periodos:</label>
 				<input
 					type="number"
-					id="count"
-					name="count"
-					className={errors.count ? styles.inputError : ""}
-					value={count}
+					id="interval"
+					name="interval"
+					className={errors.interval ? styles.inputError : ""}
+					value={interval}
 					onChange={onChange}
 					min="1"
 				/>
-				{errors.count && (
-					<span className={styles.fieldError}>{errors.count}</span>
+				{errors.interval && (
+					<span className={styles.fieldError}>{errors.interval}</span>
 				)}
 			</div>
+
+			<div className={styles.formGroup}>
+				<label htmlFor="endType">Terminacion:</label>
+				<select
+					id="endType"
+					name="endType"
+					value={endType}
+					onChange={onChange}
+				>
+					<option value="count">Despues de N repeticiones</option>
+					<option value="until">Hasta una fecha</option>
+				</select>
+			</div>
+
+			{endType === "count" && (
+				<div className={styles.formGroup}>
+					<label htmlFor="count">Numero de repeticiones:</label>
+					<input
+						type="number"
+						id="count"
+						name="count"
+						className={errors.count ? styles.inputError : ""}
+						value={count}
+						onChange={onChange}
+						min="1"
+					/>
+					{errors.count && (
+						<span className={styles.fieldError}>{errors.count}</span>
+					)}
+				</div>
+			)}
+
+			{endType === "until" && (
+				<div className={styles.formGroup}>
+					<label htmlFor="untilDate">Repetir hasta:</label>
+					<input
+						type="date"
+						id="untilDate"
+						name="untilDate"
+						className={errors.untilDate ? styles.inputError : ""}
+						value={untilDate}
+						onChange={onChange}
+					/>
+					{errors.untilDate && (
+						<span className={styles.fieldError}>{errors.untilDate}</span>
+					)}
+				</div>
+			)}
 		</>
 	);
 }
