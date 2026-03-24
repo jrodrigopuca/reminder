@@ -46,6 +46,7 @@ function App() {
 	const [errors, setErrors] = useState({});
 	const [submitted, setSubmitted] = useState(false);
 	const [selectedProvider, setSelectedProvider] = useState(DEFAULT_PROVIDER);
+	const [copied, setCopied] = useState(false);
 
 	const capabilities = getCapabilities(selectedProvider);
 	const providerConfig = PROVIDERS[selectedProvider];
@@ -159,14 +160,7 @@ function App() {
 				downloadIcsFile(formData);
 			}
 		} else {
-			let url;
-			if (selectedProvider === "google") {
-				url = buildGoogleCalendarUrl(formData);
-			} else if (selectedProvider === "outlook-personal") {
-				url = buildOutlookCalendarUrl(formData, "outlook.live.com");
-			} else if (selectedProvider === "outlook-work") {
-				url = buildOutlookCalendarUrl(formData, "outlook.office.com");
-			}
+			const url = buildProviderUrl();
 			if (url) {
 				window.open(url, "_blank", "noopener,noreferrer");
 			}
@@ -176,10 +170,38 @@ function App() {
 	const fieldClassName = (fieldName) =>
 		currentErrors[fieldName] ? `${styles.inputError}` : "";
 
+	const buildProviderUrl = () => {
+		if (selectedProvider === "google") {
+			return buildGoogleCalendarUrl(formData);
+		} else if (selectedProvider === "outlook-personal") {
+			return buildOutlookCalendarUrl(formData, "outlook.live.com");
+		} else if (selectedProvider === "outlook-work") {
+			return buildOutlookCalendarUrl(formData, "outlook.office.com");
+		}
+		return null;
+	};
+
+	const handleCopyUrl = () => {
+		const validationErrors = validateEventForm(formData, capabilities);
+		if (!isFormValid(validationErrors)) {
+			setSubmitted(true);
+			setErrors(validationErrors);
+			return;
+		}
+
+		const url = buildProviderUrl();
+		if (url) {
+			navigator.clipboard.writeText(url).then(() => {
+				setCopied(true);
+				setTimeout(() => setCopied(false), 2000);
+			});
+		}
+	};
+
 	return (
 		<div className={styles.layout}>
 			<div className={styles.container}>
-				<h1 className={styles.title}>Crear un evento recurrente</h1>
+				<h1 className={styles.title}>Crear un evento </h1>
 				<form className={styles.form} onSubmit={handleSubmit} noValidate>
 					<div className={`${styles.formGroup} ${styles.providerGroup}`}>
 						<label htmlFor="provider">Calendario destino:</label>
@@ -210,10 +232,10 @@ function App() {
 					</div>
 					<div className={styles.formGroup}>
 						<label htmlFor="description">Descripción:</label>
-						<input
-							type="text"
+						<textarea
 							id="description"
 							name="description"
+							rows="3"
 							value={formData.description}
 							onChange={handleChange}
 						/>
@@ -353,21 +375,33 @@ function App() {
 						/>
 					)}
 
-					<button
-						className={styles.submitButton}
-						type="submit"
-						disabled={submitted && !canSubmit}
-					>
-						{providerConfig.action === "download"
-							? formData.batch?.enabled
-								? "Descargar .ics (batch)"
-								: "Descargar .ics"
-							: `Abrir en ${providerConfig.label}`}
-					</button>
+					<div className={styles.buttonGroup}>
+						<button
+							className={styles.submitButton}
+							type="submit"
+							disabled={submitted && !canSubmit}
+						>
+							{providerConfig.action === "download"
+								? formData.batch?.enabled
+									? "Descargar .ics (batch)"
+									: "Descargar .ics"
+								: `Abrir en ${providerConfig.label}`}
+						</button>
+						{providerConfig.action === "open-url" && (
+							<button
+								type="button"
+								className={styles.copyButton}
+								onClick={handleCopyUrl}
+								disabled={submitted && !canSubmit}
+							>
+								{copied ? "¡Copiado!" : "Copiar enlace"}
+							</button>
+						)}
+					</div>
 				</form>
 			</div>
 
-			<LivePreview formData={formData} capabilities={capabilities} styles={styles} />
+			<LivePreview formData={formData} capabilities={capabilities} selectedProvider={selectedProvider} styles={styles} />
 		</div>
 	);
 }

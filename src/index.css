@@ -16,6 +16,12 @@ body {
   padding: 40px 20px;
 }
 
+@media (max-width: 720px) {
+  body {
+    padding: 16px 12px;
+  }
+}
+
 #root {
   display: flex;
   justify-content: center;

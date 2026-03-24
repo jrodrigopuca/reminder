@@ -1,16 +1,25 @@
 import { calculateOccurrences, formatOccurrenceDate } from "../../utils/occurrences";
-import { formatRecurrence, formatAlarm, formatAttendees } from "../../utils/format";
+import { formatDate, formatDuration, formatRecurrence, formatAlarm, formatAttendees } from "../../utils/format";
 import { generateBatchDates, formatBatchDate } from "../../utils/batch";
+import { PROVIDERS } from "../../services/providers";
 
 const MAX_VISIBLE = 10;
 
-function LivePreview({ formData, styles, capabilities }) {
+function LivePreview({ formData, styles, capabilities, selectedProvider }) {
 	const caps = capabilities ?? {
 		recurrence: true,
 		alarms: true,
 		attendees: true,
+		organizer: true,
 		batch: true,
 	};
+
+	const providerLabel = PROVIDERS[selectedProvider]?.label ?? null;
+
+	const hasTitle = formData.title?.trim().length > 0;
+	const hasDate = formData.startDate?.length > 0;
+	const hasTime = formData.startTime?.length > 0;
+	const hasLocation = formData.location?.trim().length > 0;
 
 	const isBatch = caps.batch !== false && formData.batch?.enabled;
 
@@ -22,7 +31,7 @@ function LivePreview({ formData, styles, capabilities }) {
 	const hasAlarm = alarmText !== null && alarmText !== "Sin recordatorio";
 
 	const attendeesText = caps.attendees !== false
-		? formatAttendees(formData.attendees, formData.organizer)
+		? formatAttendees(formData.attendees, caps.organizer !== false ? formData.organizer : null)
 		: null;
 	const hasAttendees = attendeesText !== null && attendeesText !== "Sin invitados";
 
@@ -48,22 +57,61 @@ function LivePreview({ formData, styles, capabilities }) {
 	const batchVisible = batchDates.slice(0, MAX_VISIBLE);
 	const batchRemaining = batchDates.length > MAX_VISIBLE ? batchDates.length - MAX_VISIBLE : 0;
 
-	const hasContent = recurrenceText || hasAlarm || hasAttendees || isBatch;
+	const hasBasicInfo = hasTitle || hasDate || hasTime;
+	const hasAdvanced = recurrenceText || hasAlarm || hasAttendees || isBatch;
 
-	if (!hasContent) {
+	const panelTitle = hasTitle ? formData.title.trim() : "Resumen del evento";
+
+	if (!hasBasicInfo && !hasAdvanced) {
 		return (
 			<div className={styles.livePreview}>
-				<h2 className={styles.previewTitle}>Vista previa</h2>
-				<p className={styles.previewEmpty}>
-					Configura recurrencia, recordatorio, invitados o batch para ver la vista previa.
-				</p>
+				<h2 className={styles.previewTitle}>Resumen del evento</h2>
+				<div className={styles.emptyState}>
+					<p className={styles.emptyStateIcon}>📅</p>
+					<p className={styles.emptyStateText}>
+						Empezá completando el título y la fecha para ver el resumen de tu evento.
+					</p>
+				</div>
 			</div>
 		);
 	}
 
 	return (
 		<div className={styles.livePreview}>
-			<h2 className={styles.previewTitle}>Vista previa</h2>
+			<h2 className={styles.previewTitle}>{panelTitle}</h2>
+
+			{providerLabel && (
+				<div className={styles.providerBadge}>
+					{providerLabel}
+				</div>
+			)}
+
+			<div className={styles.previewSection}>
+				<div className={styles.eventDetails}>
+					{hasDate && (
+						<>
+							<span className={styles.detailLabel}>Fecha</span>
+							<span className={styles.detailValue}>{formatDate(formData.startDate)}</span>
+						</>
+					)}
+					{hasTime && (
+						<>
+							<span className={styles.detailLabel}>Hora</span>
+							<span className={styles.detailValue}>{formData.startTime} hs</span>
+						</>
+					)}
+					<span className={styles.detailLabel}>Duración</span>
+					<span className={styles.detailValue}>
+						{formatDuration(formData.durationHours, formData.durationMinutes)}
+					</span>
+					{hasLocation && (
+						<>
+							<span className={styles.detailLabel}>Ubicación</span>
+							<span className={styles.detailValue}>{formData.location.trim()}</span>
+						</>
+					)}
+				</div>
+			</div>
 
 			{recurrenceText && (
 				<div className={styles.previewSection}>
@@ -119,7 +167,7 @@ function LivePreview({ formData, styles, capabilities }) {
 
 			{!isBatch && occurrences.length > 0 && (
 				<div className={styles.previewSection}>
-					<h3 className={styles.previewSectionTitle}>Proximas fechas</h3>
+					<h3 className={styles.previewSectionTitle}>Próximas fechas</h3>
 					<ul className={styles.occurrenceList}>
 						{occurrences.map((date, index) => (
 							<li key={index} className={styles.occurrenceItem}>
