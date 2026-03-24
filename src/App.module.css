@@ -13,7 +13,6 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 400px;
   flex-shrink: 0;
-  box-sizing: border-box;
 }
 
 .title {
@@ -47,7 +46,6 @@
   font-size: 14px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  box-sizing: border-box;
 }
 
 .formGroup input[type="checkbox"] {
@@ -126,7 +124,6 @@
   font-size: 14px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  box-sizing: border-box;
 }
 
 .inlineField span {
@@ -150,7 +147,6 @@
   font-size: 13px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  box-sizing: border-box;
 }
 
 .attendeeRsvp {
@@ -210,7 +206,6 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   flex: 1;
   min-width: 0;
-  box-sizing: border-box;
   position: sticky;
   top: 20px;
 }
