@@ -1,68 +1,32 @@
 import { useState } from "react";
-import { createEvent } from "ics";
-import { saveAs } from "file-saver";
+import { downloadIcsFile } from "./services/ics";
+import { validateEventForm, isFormValid } from "./utils/validation";
+import RecurrenceOptions from "./components/RecurrenceOptions";
 import styles from "./App.module.css";
 
-export const createWeeklyRecurrenceRule = (daysOfWeek) => {
-	return `FREQ=WEEKLY;BYDAY=${daysOfWeek.join(",").toUpperCase()}`;
-};
-
-export const createFrequencyRecurrenceRule = (frequency) => {
-	return `FREQ=${frequency.toUpperCase()}`;
-};
-
-export const transformRule = (isRecurring, frequency, daysOfWeek, count) => {
-	let recurrenceRule = "";
-	if (isRecurring) {
-		recurrenceRule =
-			frequency === "partOfWeek"
-				? createWeeklyRecurrenceRule(daysOfWeek)
-				: createFrequencyRecurrenceRule(frequency);
-		recurrenceRule += `;COUNT=${count}`;
-	}
-	return recurrenceRule;
-};
-/**
- * @function transformStartDate
- * @description transforma una fecha de inicio para que pueda ser interpretada por Calendar
- * @param {*} date fecha de inicio
- * @returns array de fecha
- */
-export const transformStartDate = (date, time) => {
-	const [year, month, day] = date.split("-").map(Number);
-	const [hours, minutes] = time.split(":").map(Number);
-	return [year, month, day, hours, minutes];
-};
-
-export const createMyEvent = (error, value) => {
-	if (error) {
-		console.error("error en lib ->", error);
-		return;
-	}
-	console.table(value);
-	const data = new Blob([value], { type: "text/calendar" });
-	console.info("blob", data);
-	saveAs(data, "event.ics");
+const INITIAL_FORM_DATA = {
+	title: "",
+	description: "",
+	location: "",
+	startDate: "",
+	startTime: "",
+	durationHours: 1,
+	durationMinutes: 0,
+	recurrence: "",
+	count: 10,
+	isRecurring: false,
+	frequency: "",
+	daysOfWeek: [],
 };
 
 function App() {
-	//datos iniciales
-	const [formData, setFormData] = useState({
-		title: "",
-		description: "",
-		location: "",
-		startDate: "",
-		startTime: "",
-		durationHours: 1,
-		durationMinutes: 0,
-		recurrence: "",
-		count: 10,
-		isRecurring: false,
-		frequency: "",
-		daysOfWeek: [],
-	});
+	const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+	const [errors, setErrors] = useState({});
+	const [submitted, setSubmitted] = useState(false);
 
-	//actualizar el state del form
+	const currentErrors = submitted ? validateEventForm(formData) : errors;
+	const canSubmit = isFormValid(validateEventForm(formData));
+
 	const handleChange = (event) => {
 		const { name, value } = event.target;
 		setFormData((prevData) => ({
@@ -71,11 +35,6 @@ function App() {
 		}));
 	};
 
-	/**
-	 * @function handleCheckboxChange
-	 * @description maneja el cambio de estado de los checkbox
-	 * @param {*} event
-	 */
 	const handleCheckboxChange = (event) => {
 		const { name, checked } = event.target;
 		setFormData((prevData) => {
@@ -94,7 +53,7 @@ function App() {
 		setFormData((prevData) => ({
 			...prevData,
 			isRecurring: !prevData.isRecurring,
-			recurrence: "", // Reset recurrence when toggling
+			recurrence: "",
 			frequency: "",
 			daysOfWeek: [],
 		}));
@@ -102,43 +61,38 @@ function App() {
 
 	const handleSubmit = (event) => {
 		event.preventDefault();
+		setSubmitted(true);
 
-		const eventDetails = {
-			start: transformStartDate(formData.startDate, formData.startTime),
-			duration: {
-				hours: parseInt(formData.durationHours),
-				minutes: parseInt(formData.durationMinutes),
-			},
-			title: formData.title,
-			description: formData.description,
-			location: formData.location,
-			recurrenceRule: transformRule(
-				formData.isRecurring,
-				formData.frequency,
-				formData.daysOfWeek,
-				formData.count
-			),
-		};
+		const validationErrors = validateEventForm(formData);
+		setErrors(validationErrors);
 
-		console.log(eventDetails);
+		if (!isFormValid(validationErrors)) {
+			return;
+		}
 
-		createEvent(eventDetails, createMyEvent);
+		downloadIcsFile(formData);
 	};
+
+	const fieldClassName = (fieldName) =>
+		currentErrors[fieldName] ? `${styles.inputError}` : "";
 
 	return (
 		<div className={styles.container}>
 			<h1 className={styles.title}>Crear un evento recurrente</h1>
-			<form className={styles.form} onSubmit={handleSubmit}>
+			<form className={styles.form} onSubmit={handleSubmit} noValidate>
 				<div className={styles.formGroup}>
 					<label htmlFor="title">Título:</label>
 					<input
 						type="text"
 						id="title"
 						name="title"
+						className={fieldClassName("title")}
 						value={formData.title}
 						onChange={handleChange}
-						required
 					/>
+					{currentErrors.title && (
+						<span className={styles.fieldError}>{currentErrors.title}</span>
+					)}
 				</div>
 				<div className={styles.formGroup}>
 					<label htmlFor="description">Descripción:</label>
@@ -161,26 +115,32 @@ function App() {
 					/>
 				</div>
 				<div className={styles.formGroup}>
-					<label htmlFor="startDate">Fecha de inicio (YYYY-MM-DD):</label>
+					<label htmlFor="startDate">Fecha de inicio:</label>
 					<input
 						type="date"
 						id="startDate"
 						name="startDate"
+						className={fieldClassName("startDate")}
 						value={formData.startDate}
 						onChange={handleChange}
-						required
 					/>
+					{currentErrors.startDate && (
+						<span className={styles.fieldError}>{currentErrors.startDate}</span>
+					)}
 				</div>
 				<div className={styles.formGroup}>
-					<label htmlFor="startTime">Hora de inicio (HH:MM):</label>
+					<label htmlFor="startTime">Hora de inicio:</label>
 					<input
 						type="time"
 						id="startTime"
 						name="startTime"
+						className={fieldClassName("startTime")}
 						value={formData.startTime}
 						onChange={handleChange}
-						required
 					/>
+					{currentErrors.startTime && (
+						<span className={styles.fieldError}>{currentErrors.startTime}</span>
+					)}
 				</div>
 				<div className={styles.formGroup}>
 					<label htmlFor="durationHours">Duración (horas):</label>
@@ -188,10 +148,16 @@ function App() {
 						type="number"
 						id="durationHours"
 						name="durationHours"
+						className={fieldClassName("durationHours")}
 						value={formData.durationHours}
 						onChange={handleChange}
-						required
+						min="0"
 					/>
+					{currentErrors.durationHours && (
+						<span className={styles.fieldError}>
+							{currentErrors.durationHours}
+						</span>
+					)}
 				</div>
 				<div className={styles.formGroup}>
 					<label htmlFor="durationMinutes">Duración (minutos):</label>
@@ -199,10 +165,17 @@ function App() {
 						type="number"
 						id="durationMinutes"
 						name="durationMinutes"
+						className={fieldClassName("durationMinutes")}
 						value={formData.durationMinutes}
 						onChange={handleChange}
-						required
+						min="0"
+						max="59"
 					/>
+					{currentErrors.durationMinutes && (
+						<span className={styles.fieldError}>
+							{currentErrors.durationMinutes}
+						</span>
+					)}
 				</div>
 				<div className={styles.formGroup}>
 					<label className={styles.checkboxLabel}>
@@ -214,65 +187,24 @@ function App() {
 						Evento recurrente
 					</label>
 				</div>
+
 				{formData.isRecurring && (
-					<>
-						<div className={styles.formGroup}>
-							<label htmlFor="frequency">Frecuencia:</label>
-							<select
-								id="frequency"
-								name="frequency"
-								value={formData.frequency}
-								onChange={handleChange}
-							>
-								<option value="">Seleccionar frecuencia</option>
-								<option value="daily">Diario</option>
-								<option value="weekly">Semanal</option>
-								<option value="partOfWeek">Parte de la semana</option>
-								<option value="monthly">Mensual</option>
-							</select>
-						</div>
-						{formData.frequency === "partOfWeek" && (
-							<div className={styles.formGroup}>
-								<label>Días de la semana:</label>
-								<div className={styles.checkboxGroup}>
-									{[
-										{ en: "MO", es: "L" },
-										{ en: "TU", es: "M" },
-										{ en: "WE", es: "X" },
-										{ en: "TH", es: "J" },
-										{ en: "FR", es: "V" },
-										{ en: "SA", es: "S" },
-										{ en: "SU", es: "D" },
-									].map((day) => (
-										<label key={day.en}>
-											<input
-												type="checkbox"
-												name={day.en}
-												checked={formData.daysOfWeek.includes(day.en)}
-												onChange={handleCheckboxChange}
-												value={day.en}
-											/>
-											{day.es}
-										</label>
-									))}
-								</div>
-							</div>
-						)}
-						<div className={styles.formGroup}>
-							<label htmlFor="count">Número de repeticiones:</label>
-							<input
-								type="number"
-								id="count"
-								name="count"
-								value={formData.count}
-								onChange={handleChange}
-								required
-							/>
-						</div>
-					</>
+					<RecurrenceOptions
+						frequency={formData.frequency}
+						daysOfWeek={formData.daysOfWeek}
+						count={formData.count}
+						onChange={handleChange}
+						onDayChange={handleCheckboxChange}
+						errors={currentErrors}
+						styles={styles}
+					/>
 				)}
 
-				<button className={styles.submitButton} type="submit">
+				<button
+					className={styles.submitButton}
+					type="submit"
+					disabled={submitted && !canSubmit}
+				>
 					Crear evento
 				</button>
 			</form>

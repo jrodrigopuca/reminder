@@ -83,3 +83,18 @@
 .submitButton:hover {
   background-color: #357ae8;
 }
+
+.submitButton:disabled {
+  background-color: #a0c4ff;
+  cursor: not-allowed;
+}
+
+.fieldError {
+  color: #d93025;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.inputError {
+  border-color: #d93025;
+}
